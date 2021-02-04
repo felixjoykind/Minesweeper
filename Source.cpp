@@ -29,6 +29,7 @@ private:
 		void SetType(TileType newType) { type = newType; }
 
 		bool Mined() const { return hasBomb; }
+		void SpawnBomb() { hasBomb = true; }
 	private:
 		TileType type;
 		bool hasBomb;
@@ -53,7 +54,7 @@ private:
 	const unsigned int bombsLimit = 30;
 	unsigned int bombCount = 0;
 
-	const unsigned int flagsLimit = 30;
+	const unsigned int flagsLimit = 32;
 	int unsigned flagsCount = 0;
 
 	const int offsetY = 30;
@@ -79,20 +80,20 @@ private:
 
 	bool OnUserCreate() override
 	{
-		srand(time(NULL));
 		for (int i = 0; i < 256; i++)
-		{
-			int randBomb = rand() % 10;
-			if (randBomb == 1)
-			{
-				if (bombCount < bombsLimit)
-				{
-					bombCount++;
-					tiles.push_back(Tile(true));
-					continue;
-				}
-			}
 			tiles.push_back(Tile(false));
+
+		srand(time(NULL));
+		for (int i = 0; i <= bombsLimit; i++)
+		{
+			olc::vi2d pos;
+			do
+			{
+				pos.x = rand() % 16;
+				pos.y = rand() % 16;
+			} while (tiles[pos.y * nWidth + pos.x].Mined());
+			tiles[pos.y * nWidth + pos.x].SpawnBomb();
+			std::cout << "bomb spawned\n";
 		}
 
 		return true;
@@ -147,7 +148,17 @@ private:
 					SetTile(x, y, TileType::Flagged);
 					std::cout << "Flagged tile: " << x << ", " << y << std::endl;
 					flagsCount++;
-					won = std::count_if(tiles.begin(), tiles.end(), [](Tile t) { return t.Mined() && t.GetType() == TileType::Flagged; }) == bombCount;
+					won = std::count_if(tiles.begin(), tiles.end(), [](Tile t) { return t.Mined() && t.GetType() == TileType::Flagged; }) == bombCount
+						&& flagsCount == bombCount;
+					// revealing all tiles if player won
+					if (won)
+					{
+						for (auto& tile : tiles)
+						{
+							if (tile.GetType() == TileType::Hidden)
+								tile.SetType(TileType::Revealed);
+						}
+					}
 				}
 				// unflag if tile is flagged
 				else if (tile.GetType() == TileType::Flagged)
@@ -165,22 +176,24 @@ private:
 				tiles.clear();
 				bombCount = 0;
 				flagsCount = 0;
-				srand(time(NULL));
+
 				for (int i = 0; i < 256; i++)
-				{
-					int randBomb = rand() % 10;
-					if (randBomb == 1)
-					{
-						if (bombCount <= bombsLimit)
-						{
-							bombCount++;
-							tiles.push_back(Tile(true));
-							continue;
-						}
-					}
 					tiles.push_back(Tile(false));
+
+				srand(time(NULL));
+				for (int i = 0; i <= bombsLimit; i++)
+				{
+					olc::vi2d pos;
+					do
+					{
+						pos.x = rand() % 16;
+						pos.y = rand() % 16;
+					} while (tiles[pos.y * nWidth + pos.x].Mined());
+					tiles[pos.y * nWidth + pos.x].SpawnBomb();
+					std::cout << "bomb spawned\n";
 				}
 				losed = false;
+				won = false;
 			}
 		}
 
